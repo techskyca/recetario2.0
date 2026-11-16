@@ -1,0 +1,54 @@
+/* Variables de diseño industrial para Recetario Ultraseco 2.0 */
+:root {
+  /* Paleta clara técnica */
+  --bg-app: #F7F8FA;
+  --bg-surface: #FFFFFF;
+  --bg-sidebar: #EBEEF2;
+  --bg-sidebar-hover: #DFE4EC;
+  --bg-sidebar-active: #D2DCE8;
+  --bg-header: #FFFFFF;
+  --bg-row-alt: #FAFBFC;
+  --bg-row-hover: #F0F4F8;
+  --bg-input: #FFFFFF;
+  --bg-scaled-banner: #E6F0F5;
+
+  /* Textos de alto contraste para lectura en planta */
+  --text-primary: #1F2933;
+  --text-secondary: #4A5568;
+  --text-muted: #687588;
+  --text-inverse: #FFFFFF;
+
+  /* Color de acento único: Azul Petróleo / Acero Industrial */
+  --accent-primary: #0F4C75;
+  --accent-hover: #0B3958;
+  --accent-light: #E3EEF5;
+  --accent-border: #1B6CA8;
+
+  /* Naranja de seguridad (advertencias puntuales y confirmación de borrado) */
+  --safety-orange: #D9531E;
+  --safety-orange-hover: #B84214;
+  --safety-orange-bg: #FDF1EC;
+  --safety-orange-border: #E88B66;
+
+  /* Indicadores de estado de variante */
+  --status-vigente: #1B8A5A;
+  --status-vigente-bg: #E6F4EE;
+  --status-borrador: #687588;
+  --status-borrador-bg: #EDF0F4;
+  --status-obsoleta: #B84A4A;
+  --status-obsoleta-bg: #F9EBEB;
+
+  /* Bordes y líneas divisorias finas (sin sombras ni cards) */
+  --border-color: #CBD2D9;
+  --border-strong: #9AA5B1;
+  --border-subtle: #E4E7EB;
+
+  /* Tipografía técnica legible a distancia */
+  --font-sans: 'IBM Plex Sans', 'Inter', 'Liberation Sans', 'Noto Sans', 'DejaVu Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Liberation Mono', 'Noto Mono', 'DejaVu Sans Mono', monospace;
+
+  /* Dimensiones de layout */
+  --sidebar-width: 340px;
+  --focus-ring: 2px solid var(--accent-primary);
+}
+

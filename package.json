@@ -1,0 +1,26 @@
+{
+  "name": "recetario-ultraseco-online-neon",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Versión Web Online de Recetario Ultraseco 2.0 conectada a PostgreSQL en Neon.com",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node dist-server/index.cjs"
+  },
+  "dependencies": {
+    "pg": "8.20.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.17",
+    "@types/pg": "8.20.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "esbuild": "0.27.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.5"
+  }
+}
+
