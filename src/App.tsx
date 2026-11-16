@@ -30,6 +30,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loteEscala, setLoteEscala] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Estados de diálogos modales
   const [modalNewMode, setModalNewMode] = useState<'create' | 'duplicate' | null>(null);
@@ -104,6 +105,7 @@ export const App: React.FC = () => {
           setSelectedReceta(full);
           setLoteEscala(null);
           setIsEditing(false);
+          setIsMobileSidebarOpen(false);
         }
       } catch (err) {
         showBanner('error', err instanceof Error ? err.message : 'No se pudo abrir la receta seleccionada.');
@@ -235,16 +237,62 @@ export const App: React.FC = () => {
 
   return (
     <>
-      <div className="app-shell no-print">
+      {/* Barra superior exclusiva para móviles y tablets */}
+      <div className="mobile-topbar no-print">
+        <button
+          type="button"
+          className="btn-mobile-menu"
+          onClick={() => setIsMobileSidebarOpen((v) => !v)}
+          aria-label="Abrir o cerrar lista de productos y recetas"
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? '✕ Cerrar menú' : '☰ Productos / Recetas'}
+        </button>
+        <div className="mobile-topbar-title">
+          {selectedReceta
+            ? `${selectedReceta.producto_nombre} (${selectedReceta.codigo_version})`
+            : 'RECETARIO ULTRASECO 2.0'}
+        </div>
+        <button
+          type="button"
+          className="btn-mobile-new"
+          onClick={() => {
+            setIsMobileSidebarOpen(false);
+            setModalNewMode('create');
+          }}
+          disabled={isEditing}
+        >
+          + Nueva
+        </button>
+      </div>
+
+      <div className={`app-shell no-print ${isMobileSidebarOpen ? 'mobile-sidebar-open' : ''}`}>
+        {isMobileSidebarOpen && (
+          <div
+            className="mobile-sidebar-backdrop"
+            onClick={() => setIsMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         <Sidebar
           productos={productos}
           selectedRecetaId={selectedReceta?.id ?? null}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectReceta={handleSelectReceta}
-          onNewReceta={() => setModalNewMode('create')}
-          onOpenBackup={() => setIsBackupModalOpen(true)}
-          onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+          onNewReceta={() => {
+            setIsMobileSidebarOpen(false);
+            setModalNewMode('create');
+          }}
+          onOpenBackup={() => {
+            setIsMobileSidebarOpen(false);
+            setIsBackupModalOpen(true);
+          }}
+          onOpenShortcuts={() => {
+            setIsMobileSidebarOpen(false);
+            setIsShortcutsModalOpen(true);
+          }}
           searchInputRef={searchInputRef}
           disabled={isEditing}
         />

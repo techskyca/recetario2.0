@@ -35,7 +35,7 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({ isOpen, 
         </div>
 
         <div className="modal-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="responsive-two-col-grid">
             <div>
               <h3 className="section-title" style={{ marginBottom: '10px', fontSize: '14px' }}>
                 Atajos Globales

@@ -1129,6 +1129,27 @@ body {
   justify-content: space-between;
 }
 
+/* ==================== SOPORTE RESPONSIVE (SMARTPHONES Y TABLETS) ==================== */
+.mobile-topbar {
+  display: none;
+}
+
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 @media (max-width: 1200px) {
   :root {
     --sidebar-width: 290px;
@@ -1136,8 +1157,263 @@ body {
   .recipe-meta-strip {
     grid-template-columns: repeat(2, 1fr);
   }
+  .meta-cell:nth-child(2) {
+    border-right: none;
+  }
+  .meta-cell:nth-child(1),
+  .meta-cell:nth-child(2) {
+    border-bottom: 1px solid var(--border-color);
+  }
   .production-body {
     grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 920px) {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background-color: var(--text-primary);
+    color: var(--text-inverse);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    border-bottom: 2px solid var(--accent-primary);
+  }
+
+  .mobile-topbar-title {
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+  }
+
+  .btn-mobile-menu,
+  .btn-mobile-new {
+    min-height: 38px;
+    padding: 6px 12px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #9FB3C8;
+    background-color: var(--accent-primary);
+    color: var(--text-inverse);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .app-shell {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: calc(100vh - 58px);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 58px;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 340px);
+    height: calc(100vh - 58px);
+    z-index: 950;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease-out;
+    border-right: 2px solid var(--text-primary);
+  }
+
+  .app-shell.mobile-sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 58px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(20, 28, 38, 0.55);
+    z-index: 940;
+  }
+
+  .main-area {
+    height: auto;
+    min-height: calc(100vh - 58px);
+    overflow: visible;
+  }
+
+  .recipe-content-scroll {
+    overflow: visible;
+    padding: 14px 14px 36px;
+  }
+
+  .recipe-header {
+    padding: 14px;
+  }
+
+  .recipe-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .recipe-title {
+    font-size: 21px;
+  }
+
+  .action-bar {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .action-buttons-group .btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .scale-control-box {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .scaled-notice-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .industrial-table {
+    min-width: 640px;
+  }
+
+  .editor-form-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .field-col-3,
+  .field-col-4,
+  .field-col-6,
+  .field-col-8,
+  .field-col-12 {
+    grid-column: span 1 !important;
+  }
+
+  .editor-table-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .responsive-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modo Producción en móviles y tablets */
+  .production-overlay {
+    overflow-y: auto;
+  }
+
+  .production-topbar {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .production-body {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .production-main-step {
+    padding: 18px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .production-action-huge {
+    font-size: 28px;
+  }
+
+  .production-Specs-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .production-spec-value {
+    font-size: 24px;
+  }
+
+  .production-obs-box {
+    font-size: 17px;
+    padding: 14px;
+  }
+
+  .production-timer-panel {
+    padding: 18px 14px;
+  }
+
+  .timer-digits {
+    font-size: 42px;
+  }
+
+  .production-footer {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 540px) {
+  .recipe-meta-strip {
+    grid-template-columns: 1fr;
+  }
+  .meta-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .meta-cell:last-child {
+    border-bottom: none;
+  }
+  .action-buttons-group {
+    grid-template-columns: 1fr;
+  }
+  .kbd-hint {
+    display: none;
   }
 }
 

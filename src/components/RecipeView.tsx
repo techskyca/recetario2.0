@@ -54,7 +54,8 @@ export const RecipeView: React.FC<RecipeViewProps> = ({ receta, loteEscala, onRe
           </span>
         </div>
 
-        <table className="industrial-table" aria-label="Tabla de componentes de la receta">
+        <div className="table-responsive-wrapper">
+          <table className="industrial-table" aria-label="Tabla de componentes de la receta">
           <thead>
             <tr>
               <th className="col-num">#</th>
@@ -102,6 +103,7 @@ export const RecipeView: React.FC<RecipeViewProps> = ({ receta, loteEscala, onRe
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       {/* SECCIÓN 2: PROCEDIMIENTO PASO A PASO */}
@@ -116,6 +118,7 @@ export const RecipeView: React.FC<RecipeViewProps> = ({ receta, loteEscala, onRe
           </span>
         </div>
 
+        <div className="table-responsive-wrapper">
         <table className="industrial-table" aria-label="Tabla de procedimiento paso a paso">
           <thead>
             <tr>
@@ -207,6 +210,7 @@ export const RecipeView: React.FC<RecipeViewProps> = ({ receta, loteEscala, onRe
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       {/* SECCIÓN 3: NOTAS Y PRECAUCIONES */}

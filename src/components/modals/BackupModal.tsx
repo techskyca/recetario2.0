@@ -127,7 +127,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({ isOpen, dbInfo, onClos
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="responsive-two-col-grid">
             <div
               style={{
                 border: '1px solid var(--border-color)',

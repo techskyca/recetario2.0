@@ -619,6 +619,7 @@ export const RecipeEditor: React.FC<RecipeEditorProps> = ({ receta, onSave, onCa
             </span>
           </div>
 
+          <div className="table-responsive-wrapper">
           <table className="industrial-table editable-table" aria-label="Tabla editable de componentes">
             <thead>
               <tr>
@@ -728,6 +729,7 @@ export const RecipeEditor: React.FC<RecipeEditorProps> = ({ receta, onSave, onCa
               ))}
             </tbody>
           </table>
+          </div>
 
           <div className="editor-table-footer">
             <button type="button" className="btn" onClick={() => addComponenteRow()}>
@@ -754,6 +756,7 @@ export const RecipeEditor: React.FC<RecipeEditorProps> = ({ receta, onSave, onCa
             ))}
           </datalist>
 
+          <div className="table-responsive-wrapper">
           <table className="industrial-table editable-table" aria-label="Tabla editable de pasos">
             <thead>
               <tr>
@@ -958,6 +961,7 @@ export const RecipeEditor: React.FC<RecipeEditorProps> = ({ receta, onSave, onCa
               ))}
             </tbody>
           </table>
+          </div>
 
           <div className="editor-table-footer">
             <button type="button" className="btn" onClick={() => addPasoRow()}>
