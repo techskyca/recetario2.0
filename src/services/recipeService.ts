@@ -1,5 +1,6 @@
-// Capa cliente de servicios para consultar y modificar recetas (compatible con Electron IPC y servidor local)
+// Capa cliente de servicios para consultar y modificar recetas y control de acceso
 import type {
+  AuthStatusInfo,
   BackupData,
   DbInfo,
   EstadoReceta,
@@ -7,6 +8,30 @@ import type {
   ProductoConVariantes,
   RecetaCompleta,
 } from '../types/models';
+
+const SESSION_TOKEN_KEY = 'ultraseco_auth_token_v2';
+
+export function getStoredAuthToken(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_TOKEN_KEY) || localStorage.getItem(SESSION_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuthToken(token: string | null): void {
+  try {
+    if (token) {
+      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+      localStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {
+    // Ignorar errores de almacenamiento
+  }
+}
 
 declare global {
   interface Window {
@@ -30,10 +55,12 @@ declare global {
 }
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = getStoredAuthToken();
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'x-auth-token': token } : {}),
       ...(options?.headers || {}),
     },
   });
@@ -46,6 +73,12 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
     // Respuesta no JSON (por ejemplo página de error de plataforma)
   }
 
+  if (response.status === 401) {
+    setStoredAuthToken(null);
+    window.dispatchEvent(new CustomEvent('ultraseco:unauthorized'));
+    throw new Error(data.error || 'Sesión expirada o clave requerida.');
+  }
+
   if (!response.ok) {
     const detail = data.error || data.message || (rawText ? rawText.slice(0, 180) : '');
     throw new Error(detail ? `${detail} (HTTP ${response.status})` : `Error del servidor (${response.status})`);
@@ -54,6 +87,37 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const recipeService = {
+  async login(clave: string): Promise<{ token: string; fecha_actualizacion: string }> {
+    const res = await apiFetch<{ token: string; fecha_actualizacion: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ clave }),
+    });
+    setStoredAuthToken(res.token);
+    return res;
+  },
+
+  logout(): void {
+    setStoredAuthToken(null);
+    window.dispatchEvent(new CustomEvent('ultraseco:unauthorized'));
+  },
+
+  async getAuthStatus(): Promise<AuthStatusInfo> {
+    return apiFetch<AuthStatusInfo>('/api/auth/status');
+  },
+
+  async changePassword(args: {
+    claveActual: string;
+    claveNueva: string;
+    observacion?: string;
+  }): Promise<{ token: string; authStatus: AuthStatusInfo }> {
+    const res = await apiFetch<{ token: string; authStatus: AuthStatusInfo }>('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(args),
+    });
+    setStoredAuthToken(res.token);
+    return res;
+  },
+
   async getInfo(): Promise<DbInfo> {
     if (window.electronAPI) {
       return window.electronAPI.getInfo();

@@ -59,6 +59,42 @@ export async function handleNeonApiRequest(
   }
 
   try {
+    // 1. Ruta pública para iniciar sesión con clave de acceso
+    if (req.method === 'POST' && pathname === '/api/auth/login') {
+      const body = await readJsonBody<{ clave: string }>(req);
+      const loginData = await db.verifyLogin(body.clave || '');
+      sendJson(res, 200, loginData);
+      return true;
+    }
+
+    // 2. Verificar token de sesión en todas las demás rutas /api/*
+    const rawHeader = req.headers['x-auth-token'];
+    const token = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+    const isAuthorized = await db.verifySessionToken(token);
+
+    if (!isAuthorized) {
+      sendJson(res, 401, { error: 'No autorizado. Ingrese la clave de acceso del recetario.' });
+      return true;
+    }
+
+    // 3. Consultar estado e historial de cambios de clave
+    if (req.method === 'GET' && pathname === '/api/auth/status') {
+      sendJson(res, 200, await db.getAuthStatus());
+      return true;
+    }
+
+    // 4. Cambiar clave de acceso y guardar registro de fecha en Neon
+    if (req.method === 'POST' && pathname === '/api/auth/change-password') {
+      const body = await readJsonBody<{
+        claveActual: string;
+        claveNueva: string;
+        observacion?: string;
+      }>(req);
+      const result = await db.changePassword(body.claveActual, body.claveNueva, body.observacion);
+      sendJson(res, 200, result);
+      return true;
+    }
+
     if (req.method === 'GET' && pathname === '/api/info') {
       sendJson(res, 200, await db.getInfo());
       return true;

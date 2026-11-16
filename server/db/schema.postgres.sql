@@ -49,3 +49,16 @@ CREATE INDEX IF NOT EXISTS idx_recetas_producto ON recetas(producto_id);
 CREATE INDEX IF NOT EXISTS idx_componentes_receta ON componentes(receta_id, orden);
 CREATE INDEX IF NOT EXISTS idx_pasos_receta ON pasos(receta_id, numero_paso);
 
+-- Tablas de Control de Acceso y Auditoría de Cambio de Clave
+CREATE TABLE IF NOT EXISTS control_acceso (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    clave_hash TEXT NOT NULL,
+    fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS historial_cambio_clave (
+    id SERIAL PRIMARY KEY,
+    fecha_cambio TEXT NOT NULL,
+    observacion TEXT NOT NULL DEFAULT 'Cambio de clave de acceso desde panel de Ajustes'
+);
+

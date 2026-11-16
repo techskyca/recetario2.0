@@ -1,6 +1,7 @@
 // Componente raíz de Recetario Ultraseco 2.0
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionBar } from './components/ActionBar';
+import { LoginScreen } from './components/LoginScreen';
 import { PrintSheet } from './components/PrintSheet';
 import { ProductionMode } from './components/ProductionMode';
 import { RecipeEditor } from './components/RecipeEditor';
@@ -12,7 +13,7 @@ import { ConfirmDeleteModal } from './components/modals/ConfirmDeleteModal';
 import { NewRecipeModal } from './components/modals/NewRecipeModal';
 import { ShortcutsHelpModal } from './components/modals/ShortcutsHelpModal';
 import { useKeyboardNav } from './hooks/useKeyboardNav';
-import { recipeService } from './services/recipeService';
+import { getStoredAuthToken, recipeService } from './services/recipeService';
 import type {
   DbInfo,
   EstadoReceta,
@@ -23,6 +24,7 @@ import type {
 } from './types/models';
 
 export const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getStoredAuthToken()));
   const [productos, setProductos] = useState<ProductoConVariantes[]>([]);
   const [selectedReceta, setSelectedReceta] = useState<RecetaCompleta | null>(null);
   const [dbInfo, setDbInfo] = useState<DbInfo | null>(null);
@@ -93,9 +95,20 @@ export const App: React.FC = () => {
   );
 
   useEffect(() => {
-    refreshAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handleUnauth = () => {
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('ultraseco:unauthorized', handleUnauth);
+    return () => window.removeEventListener('ultraseco:unauthorized', handleUnauth);
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLoading(true);
+      refreshAll();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const handleSelectReceta = useCallback(
     async (recetaId: number) => {
@@ -194,6 +207,7 @@ export const App: React.FC = () => {
   };
 
   const anyOverlayOpen =
+    !isAuthenticated ||
     isEditing ||
     modalNewMode !== null ||
     isDeleteModalOpen ||
@@ -234,6 +248,10 @@ export const App: React.FC = () => {
     selectedReceta &&
     (selectedReceta.nombre_version.toUpperCase().includes('EJEMPLO') ||
       selectedReceta.notas.toUpperCase().includes('RECETA DE EJEMPLO'));
+
+  if (!isAuthenticated) {
+    return <LoginScreen onSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <>
@@ -416,6 +434,10 @@ export const App: React.FC = () => {
       <ShortcutsHelpModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
+        onLogout={() => {
+          recipeService.logout();
+          setIsAuthenticated(false);
+        }}
       />
     </>
   );

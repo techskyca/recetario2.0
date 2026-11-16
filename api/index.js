@@ -1406,7 +1406,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "node_modules/pg/lib/crypto/sasl.js"(exports2, module2) {
     "use strict";
-    var crypto = require_utils2();
+    var crypto2 = require_utils2();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function startSession(mechanisms, stream) {
       const candidates = ["SCRAM-SHA-256"];
@@ -1418,7 +1418,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto.randomBytes(18).toString("base64");
+      const clientNonce = crypto2.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -1453,20 +1453,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto.hashByName(hashName, peerCert);
+        const certHash = await crypto2.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto.deriveKey(password, saltBytes, sv.iteration);
-      const clientKey = await crypto.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto.sha256(clientKey);
-      const clientSignature = await crypto.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto2.deriveKey(password, saltBytes, sv.iteration);
+      const clientKey = await crypto2.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto2.sha256(clientKey);
+      const clientSignature = await crypto2.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto2.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto2.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -3666,7 +3666,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults2 = require_defaults();
     var Connection2 = require_connection();
-    var crypto = require_utils2();
+    var crypto2 = require_utils2();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -3901,7 +3901,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto2.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e) {
             this.emit("error", e);
@@ -5218,6 +5218,29 @@ async function handleNeonApiRequest(req, res, db) {
     return false;
   }
   try {
+    if (req.method === "POST" && pathname === "/api/auth/login") {
+      const body = await readJsonBody(req);
+      const loginData = await db.verifyLogin(body.clave || "");
+      sendJson(res, 200, loginData);
+      return true;
+    }
+    const rawHeader = req.headers["x-auth-token"];
+    const token = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+    const isAuthorized = await db.verifySessionToken(token);
+    if (!isAuthorized) {
+      sendJson(res, 401, { error: "No autorizado. Ingrese la clave de acceso del recetario." });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/auth/status") {
+      sendJson(res, 200, await db.getAuthStatus());
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/auth/change-password") {
+      const body = await readJsonBody(req);
+      const result = await db.changePassword(body.claveActual, body.claveNueva, body.observacion);
+      sendJson(res, 200, result);
+      return true;
+    }
     if (req.method === "GET" && pathname === "/api/info") {
       sendJson(res, 200, await db.getInfo());
       return true;
@@ -5281,6 +5304,9 @@ async function handleNeonApiRequest(req, res, db) {
   }
 }
 
+// server/db/neonDatabase.ts
+var import_node_crypto = __toESM(require("node:crypto"));
+
 // node_modules/pg/esm/index.mjs
 var import_lib = __toESM(require_lib2(), 1);
 var Client = import_lib.default.Client;
@@ -5296,6 +5322,12 @@ var TypeOverrides = import_lib.default.TypeOverrides;
 var defaults = import_lib.default.defaults;
 
 // server/db/neonDatabase.ts
+function hashPassword(plain) {
+  return import_node_crypto.default.createHash("sha256").update(`ultraseco_salt_v2:${plain}`).digest("hex");
+}
+function createAuthTokenFromHash(claveHash) {
+  return import_node_crypto.default.createHash("sha256").update(`ultraseco_session_token_v2:${claveHash}`).digest("hex");
+}
 var SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS productos (
     id SERIAL PRIMARY KEY,
@@ -5345,7 +5377,35 @@ CREATE TABLE IF NOT EXISTS pasos (
 CREATE INDEX IF NOT EXISTS idx_recetas_producto ON recetas(producto_id);
 CREATE INDEX IF NOT EXISTS idx_componentes_receta ON componentes(receta_id, orden);
 CREATE INDEX IF NOT EXISTS idx_pasos_receta ON pasos(receta_id, numero_paso);
+
+CREATE TABLE IF NOT EXISTS control_acceso (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    clave_hash TEXT NOT NULL,
+    fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS historial_cambio_clave (
+    id SERIAL PRIMARY KEY,
+    fecha_cambio TEXT NOT NULL,
+    observacion TEXT NOT NULL DEFAULT 'Cambio de clave de acceso desde panel de Ajustes'
+);
 `;
+async function seedDefaultAccessKey(client) {
+  const res = await client.query("SELECT id FROM control_acceso WHERE id = 1");
+  if (res.rows.length > 0) {
+    return;
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const initialHash = hashPassword("admin123");
+  await client.query(
+    "INSERT INTO control_acceso (id, clave_hash, fecha_actualizacion) VALUES (1, $1, $2)",
+    [initialHash, now]
+  );
+  await client.query(
+    "INSERT INTO historial_cambio_clave (fecha_cambio, observacion) VALUES ($1, $2)",
+    [now, "Creaci\xF3n inicial de clave por defecto (admin123)"]
+  );
+}
 async function seedInitialNeonData(client) {
   const countRes = await client.query("SELECT COUNT(*) as total FROM productos");
   if (Number(countRes.rows[0]?.total || 0) > 0) {
@@ -5545,6 +5605,7 @@ var NeonRecipeDatabase = class {
         await client.query("BEGIN");
         await client.query(SCHEMA_SQL);
         await seedInitialNeonData(client);
+        await seedDefaultAccessKey(client);
         await client.query("COMMIT");
         this.initialized = true;
       } catch (err) {
@@ -6024,6 +6085,90 @@ var NeonRecipeDatabase = class {
     } finally {
       client.release();
     }
+  }
+  async verifyLogin(password) {
+    await this.ensureInitialized();
+    const res = await this.pool.query(
+      "SELECT clave_hash, fecha_actualizacion FROM control_acceso WHERE id = 1"
+    );
+    const row = res.rows[0];
+    if (!row) {
+      throw new Error("Configuraci\xF3n de control de acceso no encontrada.");
+    }
+    const candidateHash = hashPassword(password);
+    if (candidateHash !== row.clave_hash) {
+      throw new Error("Clave de acceso incorrecta.");
+    }
+    return {
+      token: createAuthTokenFromHash(row.clave_hash),
+      fecha_actualizacion: row.fecha_actualizacion
+    };
+  }
+  async verifySessionToken(token) {
+    if (!token) return false;
+    await this.ensureInitialized();
+    const res = await this.pool.query(
+      "SELECT clave_hash FROM control_acceso WHERE id = 1"
+    );
+    const row = res.rows[0];
+    if (!row) return false;
+    const expectedToken = createAuthTokenFromHash(row.clave_hash);
+    return token === expectedToken;
+  }
+  async getAuthStatus() {
+    await this.ensureInitialized();
+    const accRes = await this.pool.query(
+      "SELECT fecha_actualizacion FROM control_acceso WHERE id = 1"
+    );
+    const histRes = await this.pool.query(
+      "SELECT id, fecha_cambio, observacion FROM historial_cambio_clave ORDER BY id DESC LIMIT 15"
+    );
+    return {
+      fecha_actualizacion: accRes.rows[0]?.fecha_actualizacion || (/* @__PURE__ */ new Date()).toISOString(),
+      historial: histRes.rows
+    };
+  }
+  async changePassword(claveActual, claveNueva, observacion) {
+    await this.ensureInitialized();
+    if (!claveActual) {
+      throw new Error("Debe ingresar la clave actual.");
+    }
+    if (!claveNueva || claveNueva.trim().length < 4) {
+      throw new Error("La nueva clave debe tener al menos 4 caracteres.");
+    }
+    const client = await this.pool.connect();
+    let newHash = "";
+    try {
+      await client.query("BEGIN");
+      const res = await client.query(
+        "SELECT clave_hash FROM control_acceso WHERE id = 1 FOR UPDATE"
+      );
+      const row = res.rows[0];
+      if (!row || hashPassword(claveActual) !== row.clave_hash) {
+        throw new Error("La clave actual ingresada no es correcta.");
+      }
+      newHash = hashPassword(claveNueva);
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      await client.query(
+        "UPDATE control_acceso SET clave_hash = $1, fecha_actualizacion = $2 WHERE id = 1",
+        [newHash, now]
+      );
+      await client.query(
+        "INSERT INTO historial_cambio_clave (fecha_cambio, observacion) VALUES ($1, $2)",
+        [now, observacion?.trim() || "Cambio de clave desde panel de Ajustes"]
+      );
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+    const authStatus = await this.getAuthStatus();
+    return {
+      token: createAuthTokenFromHash(newHash),
+      authStatus
+    };
   }
   async close() {
     await this.pool.end();

@@ -379,9 +379,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="btn-sidebar-footer"
           onClick={onOpenShortcuts}
           disabled={disabled}
-          title="Ver atajos de teclado (? o F1)"
+          title="Ajustes de clave de acceso y atajos de teclado (? o F1)"
         >
-          <span>Ajustes / Atajos</span>
+          <span>🔒 Ajustes / Clave</span>
           <span className="mono">[?]</span>
         </button>
         <button

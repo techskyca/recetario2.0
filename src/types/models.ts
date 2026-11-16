@@ -137,3 +137,14 @@ export interface DbInfo {
   modoEjecucion: 'electron' | 'local-desktop-server';
 }
 
+export interface HistorialClaveItem {
+  id: number;
+  fecha_cambio: string;
+  observacion: string;
+}
+
+export interface AuthStatusInfo {
+  fecha_actualizacion: string;
+  historial: HistorialClaveItem[];
+}
+

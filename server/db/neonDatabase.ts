@@ -1,16 +1,27 @@
 // Capa de acceso a datos PostgreSQL (Neon.com) para la versión Online de Recetario Ultraseco 2.0
+import crypto from 'node:crypto';
 import { Pool, type PoolClient } from 'pg';
 import type {
+  AuthStatusInfo,
   BackupData,
   Componente,
   DbInfo,
   GuardarRecetaPayload,
+  HistorialClaveItem,
   Paso,
   Producto,
   ProductoConVariantes,
   RecetaCompleta,
   RecetaResumen,
 } from '../../src/types/models.ts';
+
+function hashPassword(plain: string): string {
+  return crypto.createHash('sha256').update(`ultraseco_salt_v2:${plain}`).digest('hex');
+}
+
+function createAuthTokenFromHash(claveHash: string): string {
+  return crypto.createHash('sha256').update(`ultraseco_session_token_v2:${claveHash}`).digest('hex');
+}
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS productos (
@@ -61,7 +72,36 @@ CREATE TABLE IF NOT EXISTS pasos (
 CREATE INDEX IF NOT EXISTS idx_recetas_producto ON recetas(producto_id);
 CREATE INDEX IF NOT EXISTS idx_componentes_receta ON componentes(receta_id, orden);
 CREATE INDEX IF NOT EXISTS idx_pasos_receta ON pasos(receta_id, numero_paso);
+
+CREATE TABLE IF NOT EXISTS control_acceso (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    clave_hash TEXT NOT NULL,
+    fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS historial_cambio_clave (
+    id SERIAL PRIMARY KEY,
+    fecha_cambio TEXT NOT NULL,
+    observacion TEXT NOT NULL DEFAULT 'Cambio de clave de acceso desde panel de Ajustes'
+);
 `;
+
+async function seedDefaultAccessKey(client: PoolClient): Promise<void> {
+  const res = await client.query<{ id: number }>('SELECT id FROM control_acceso WHERE id = 1');
+  if (res.rows.length > 0) {
+    return;
+  }
+  const now = new Date().toISOString();
+  const initialHash = hashPassword('admin123');
+  await client.query(
+    'INSERT INTO control_acceso (id, clave_hash, fecha_actualizacion) VALUES (1, $1, $2)',
+    [initialHash, now]
+  );
+  await client.query(
+    'INSERT INTO historial_cambio_clave (fecha_cambio, observacion) VALUES ($1, $2)',
+    [now, 'Creación inicial de clave por defecto (admin123)']
+  );
+}
 
 async function seedInitialNeonData(client: PoolClient): Promise<void> {
   const countRes = await client.query<{ total: string }>('SELECT COUNT(*) as total FROM productos');
@@ -271,6 +311,7 @@ export class NeonRecipeDatabase {
         await client.query('BEGIN');
         await client.query(SCHEMA_SQL);
         await seedInitialNeonData(client);
+        await seedDefaultAccessKey(client);
         await client.query('COMMIT');
         this.initialized = true;
       } catch (err) {
@@ -816,6 +857,107 @@ export class NeonRecipeDatabase {
     } finally {
       client.release();
     }
+  }
+
+  public async verifyLogin(password: string): Promise<{ token: string; fecha_actualizacion: string }> {
+    await this.ensureInitialized();
+    const res = await this.pool.query<{ clave_hash: string; fecha_actualizacion: string }>(
+      'SELECT clave_hash, fecha_actualizacion FROM control_acceso WHERE id = 1'
+    );
+    const row = res.rows[0];
+    if (!row) {
+      throw new Error('Configuración de control de acceso no encontrada.');
+    }
+
+    const candidateHash = hashPassword(password);
+    if (candidateHash !== row.clave_hash) {
+      throw new Error('Clave de acceso incorrecta.');
+    }
+
+    return {
+      token: createAuthTokenFromHash(row.clave_hash),
+      fecha_actualizacion: row.fecha_actualizacion,
+    };
+  }
+
+  public async verifySessionToken(token: string | undefined | null): Promise<boolean> {
+    if (!token) return false;
+    await this.ensureInitialized();
+    const res = await this.pool.query<{ clave_hash: string }>(
+      'SELECT clave_hash FROM control_acceso WHERE id = 1'
+    );
+    const row = res.rows[0];
+    if (!row) return false;
+    const expectedToken = createAuthTokenFromHash(row.clave_hash);
+    return token === expectedToken;
+  }
+
+  public async getAuthStatus(): Promise<AuthStatusInfo> {
+    await this.ensureInitialized();
+    const accRes = await this.pool.query<{ fecha_actualizacion: string }>(
+      'SELECT fecha_actualizacion FROM control_acceso WHERE id = 1'
+    );
+    const histRes = await this.pool.query<HistorialClaveItem>(
+      'SELECT id, fecha_cambio, observacion FROM historial_cambio_clave ORDER BY id DESC LIMIT 15'
+    );
+    return {
+      fecha_actualizacion: accRes.rows[0]?.fecha_actualizacion || new Date().toISOString(),
+      historial: histRes.rows,
+    };
+  }
+
+  public async changePassword(
+    claveActual: string,
+    claveNueva: string,
+    observacion?: string
+  ): Promise<{ token: string; authStatus: AuthStatusInfo }> {
+    await this.ensureInitialized();
+    if (!claveActual) {
+      throw new Error('Debe ingresar la clave actual.');
+    }
+    if (!claveNueva || claveNueva.trim().length < 4) {
+      throw new Error('La nueva clave debe tener al menos 4 caracteres.');
+    }
+
+    const client = await this.pool.connect();
+    let newHash = '';
+
+    try {
+      await client.query('BEGIN');
+      const res = await client.query<{ clave_hash: string }>(
+        'SELECT clave_hash FROM control_acceso WHERE id = 1 FOR UPDATE'
+      );
+      const row = res.rows[0];
+      if (!row || hashPassword(claveActual) !== row.clave_hash) {
+        throw new Error('La clave actual ingresada no es correcta.');
+      }
+
+      newHash = hashPassword(claveNueva);
+      const now = new Date().toISOString();
+
+      await client.query(
+        'UPDATE control_acceso SET clave_hash = $1, fecha_actualizacion = $2 WHERE id = 1',
+        [newHash, now]
+      );
+
+      await client.query(
+        'INSERT INTO historial_cambio_clave (fecha_cambio, observacion) VALUES ($1, $2)',
+        [now, observacion?.trim() || 'Cambio de clave desde panel de Ajustes']
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    const authStatus = await this.getAuthStatus();
+    return {
+      token: createAuthTokenFromHash(newHash),
+      authStatus,
+    };
   }
 
   public async close(): Promise<void> {
