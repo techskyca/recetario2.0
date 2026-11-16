@@ -16,7 +16,7 @@ async function buildOnline() {
     logLevel: 'info',
   });
 
-  console.log('2/2 Empaquetando servidor web y conector Neon PostgreSQL (dist-server/index.cjs)...');
+  console.log('2/3 Empaquetando servidor web y conector Neon PostgreSQL (dist-server/index.cjs)...');
   const distServerDir = path.join(rootDir, 'dist-server');
   fs.mkdirSync(distServerDir, { recursive: true });
 
@@ -28,6 +28,20 @@ async function buildOnline() {
     target: 'node20',
     external: ['pg'],
     outfile: path.join(distServerDir, 'index.cjs'),
+  });
+
+  console.log('3/3 Empaquetando función Serverless autocontenida para Vercel (api/index.js)...');
+  await esbuild.build({
+    entryPoints: [path.join(rootDir, 'server/vercelApiEntry.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    external: ['pg-native'],
+    outfile: path.join(rootDir, 'api/index.js'),
+    footer: {
+      js: 'if (module.exports && module.exports.default) { module.exports = Object.assign(module.exports.default, module.exports); }',
+    },
   });
 
   console.log('\n============================================================');

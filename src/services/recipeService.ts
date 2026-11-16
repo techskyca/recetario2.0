@@ -38,9 +38,17 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
     },
   });
 
-  const data = await response.json().catch(() => ({}));
+  const rawText = await response.text().catch(() => '');
+  let data: { error?: string; message?: string } = {};
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    // Respuesta no JSON (por ejemplo página de error de plataforma)
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || `Error de comunicación local (${response.status})`);
+    const detail = data.error || data.message || (rawText ? rawText.slice(0, 180) : '');
+    throw new Error(detail ? `${detail} (HTTP ${response.status})` : `Error del servidor (${response.status})`);
   }
   return data as T;
 }

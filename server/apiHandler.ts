@@ -41,12 +41,18 @@ function sendJson(res: ServerResponse, statusCode: number, data: unknown): void 
 }
 
 export async function handleNeonApiRequest(
-  req: IncomingMessage,
+  req: IncomingMessage & { query?: Record<string, string | string[]> },
   res: ServerResponse,
   db: NeonRecipeDatabase
 ): Promise<boolean> {
   const urlObj = new URL(req.url || '/', 'http://127.0.0.1');
-  const pathname = urlObj.pathname;
+  let pathname = urlObj.pathname;
+
+  // En Vercel, cuando se usa un rewrite hacia /api/index?__path=..., reconstruir la ruta original
+  const rewrittenPath = urlObj.searchParams.get('__path') || (typeof req.query?.__path === 'string' ? req.query.__path : null);
+  if (rewrittenPath) {
+    pathname = `/api/${rewrittenPath.replace(/^\/+/, '')}`;
+  }
 
   if (!pathname.startsWith('/api/')) {
     return false;

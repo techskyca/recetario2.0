@@ -1,7 +1,7 @@
-// Función Serverless para Vercel / entornos Cloud que redirige todas las rutas /api/* a Neon PostgreSQL
+// Punto de entrada de la función Serverless de Vercel (se compila en api/index.js durante npm run build)
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handleNeonApiRequest } from '../server/apiHandler.ts';
-import { NeonRecipeDatabase } from '../server/db/neonDatabase.ts';
+import { handleNeonApiRequest } from './apiHandler.ts';
+import { NeonRecipeDatabase } from './db/neonDatabase.ts';
 
 let sharedDb: NeonRecipeDatabase | null = null;
 
@@ -22,4 +22,3 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     res.end(JSON.stringify({ error: message }));
   }
 }
-
